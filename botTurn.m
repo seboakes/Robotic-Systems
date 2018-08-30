@@ -15,7 +15,7 @@ if turnVal ~= 0  %skips over if value is zero
     power = 100;
     
    
-    wheel_circ = 4.4*pi;
+    wheel_circ = 4.2*pi;
     wheelbase_circ = 12*pi;
     
     circ_fraction = turnVal/360;

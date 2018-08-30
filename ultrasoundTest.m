@@ -11,11 +11,11 @@ h = COM_OpenNXT(); %prepares workspace,  if this fails, there is an issue with y
 COM_SetDefaultNXT(h); %sets default handle
 
 
-OpenUltrasonic(SENSOR_3);
+OpenUltrasonic(SENSOR_1);
 
 %% Lets measure distance
 for i = 1:1000
-    GetUltrasonic(SENSOR_3)
+    GetUltrasonic(SENSOR_1)
     pause(0.1);
 end
 
@@ -25,5 +25,5 @@ end
 
 %% ONLY after you wont use the sensor again (e.g. exit program), clear with:
 
-CloseSensor(SENSOR_3);
+CloseSensor(SENSOR_1);
 COM_CloseNXT all;

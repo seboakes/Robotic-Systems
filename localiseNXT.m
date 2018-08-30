@@ -1,4 +1,4 @@
-function [botEst] = localiseNXT(botSim,map,target)
+function [botEst] = localiseNXT(botSim,map)
 %This function returns botSim, and accepts, botSim, a map and a target.
 %LOCALISE Template localisation function
 
@@ -11,20 +11,25 @@ particle_correction = 1;
 
 %%  SET UP UNIVERSAL CONST. + STARTER VALUES
   %set initial parameters and certain variables
+%SD = 10;
 SD = 10;
 SD_POS = 10;  % standard deviation position - for convergence check
 SD_ANG = 10; 
 
  
-Mnoise = 0.05;  %noise variable
-Tnoise = 0.05;
-Snoise = 0.3;
+% Mnoise = 0.05;  %noise variable
+% Tnoise = 0.05;
+% Snoise = 0.3;
+
+Mnoise = 0.1;  %noise variables
+Tnoise = 0.1;
+Snoise = 0.1;
 
 num=300;   %set number of particles
-moveDistFrac = 0.3;
+moveDistFrac = 0.4;
 randFrac = 0.7;
 turnCorrFrac = 1;
-topCandidates = num/10;
+topCandidates = round(num/15);
 
 
 
@@ -47,7 +52,7 @@ botEst = BotSim(map);
 mot_a = NXTMotor('A');  %motor for ultrasound
 mot_b = NXTMotor('B');  %right wheel motor
 mot_c = NXTMotor('C');  %left wheel motor
-OpenUltrasonic(SENSOR_3);
+OpenUltrasonic(SENSOR_1);
 
 
 %% INITIALISE PARTICLES
@@ -104,8 +109,8 @@ randVariable=rand();
 
 %% MAKE BOT MEASUREMENT
 
-    upperLim=60;
-    botDist = ultraScanNXT(mot_a,100,6);   %take real scan
+    upperLim=80;
+    botDist = ultraScanNXT(mot_a,90,6);   %take real scan
     
     botVecMag = norm(botDist);   %vector mag for bot distance data
     
@@ -579,7 +584,7 @@ botEst.drawBot(5)
 fprintf('X position is %d\n',estimateX);
 fprintf('Y position is %d\n',estimateY);
 
-CloseSensor(SENSOR_3);
+CloseSensor(SENSOR_1);
 
 
 
