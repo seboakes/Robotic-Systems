@@ -1,8 +1,8 @@
-function [botEst] = original_localise(botSim,map,target)
+function [botEst] = original_localise(botSim,map)
 %This function returns botSim, and accepts, botSim, a map and a target.
 %LOCALISE Template localisation function
 
-debug=0;
+debug=1;
 
 %%  SET UP UNIVERSAL CONST. + STARTER VALUES
   %set initial parameters and certain variables
@@ -21,7 +21,7 @@ randFrac = 0.7;
 turnCorrFrac = 1;
 topCandidates = num/10;
 
-plot(target,'x')
+
 
 
 damp = 0.0005;
@@ -98,6 +98,8 @@ randVariable=rand();
     botDist = botSim.ultraScan();   %take real scan
     
     botVecMag = norm(botDist);   %vector mag for bot distance data
+    
+    
 
 
 %% PARTICLE MEASUREMENTS
@@ -108,6 +110,8 @@ for i = 1:num
     if  partInsideMap ==1
       
         particleDist  = particles(i).ultraScan(); %perform simulated scan
+        
+       
 
         resultsArray(1,i) = i;  %send indice to results array
        

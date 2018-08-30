@@ -205,10 +205,16 @@ for i = 1:num
         resultsArray(2,i) = particlePosition(1);  % insert x position into results array
         resultsArray(3,i) = particlePosition(2);   % insert y position into results array
    
-      
+        vecMag = zeros(1,6);
         
-        z = sqrt(sum((particleDist-botDist).^2));
-         
+        for m=1:6    %loop for cycling through possible orientations with respect to actual bot
+            vec = circshift(particleDist,m-1);
+           vecMag(m) = sqrt(sum((vec-botDist).^2));   %finds best orientation fit
+             
+        end
+        
+        Z = sqrt(sum((vec-botDist).^2));
+          %select smallest vectoral difference to use for alignment correction.
      
        
         
@@ -297,7 +303,7 @@ disp('After conv check.');
 hold off;
 end
 
- clf;
+clf;
 
 
 %% REALLOCATE PARTICLES ACCORDING TO WEIGHTS
@@ -420,7 +426,7 @@ prox_dist = 20;
             botTurn((7-dirIndice2)*(-turn_inc));   %turn right towards shortest distance
         end
         
-        BOT_TURN = (dirIndice2-1)*(turn_inc);
+        BOT_TURN = (dirIndice2-1)*(-turn_inc);
        
         botMove(-10);   %move bot backwards away from wall
         BOT_MOVE = -10;
@@ -433,7 +439,7 @@ prox_dist = 20;
         else
             botTurn((7-dirIndice1)*(-turn_inc));   %turn right towards longest dist.
         end
-            BOT_TURN = (dirIndice1-1)*(turn_inc);
+            BOT_TURN = (dirIndice1-1)*(-turn_inc);
             botMove(moveDistFrac*maxDist);   %move bot a fraction of the previously measured max distance
             BOT_MOVE = moveDistFrac*maxDist;
             
