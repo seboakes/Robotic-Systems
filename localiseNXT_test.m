@@ -1,4 +1,4 @@
-function [botEst] = localiseNXT(botSim,map)
+function [botEst] = localiseNXT_test(botSim,map)
 %This function returns botSim, and accepts, botSim, a map and a target.
 %LOCALISE Template localisation function
 
@@ -12,24 +12,24 @@ particle_correction = 1;
 %%  SET UP UNIVERSAL CONST. + STARTER VALUES
   %set initial parameters and certain variables
 %SD = 10;
-SD = 11;
-SD_POS = 7;  % standard deviation position - for convergence check
-SD_ANG = 5; 
+SD = 14;
+SD_POS = 10;  % standard deviation position - for convergence check
+SD_ANG = 10; 
 
  
 % Mnoise = 0.05;  %noise variable
 % Tnoise = 0.05;
 % Snoise = 0.3;
 
-Mnoise = 0.1;  %noise variables
-Tnoise = 0.1;
-Snoise =0.5;
+Mnoise = 0.07;  %noise variables
+Tnoise = 0.07;
+Snoise = 0.05;
 
-num=600;   %set number of particles
-moveDistFrac = 0.3;
-randFrac = 0.8;
+num=500;   %set number of particles
+moveDistFrac = 0.4;
+randFrac = 0.5;
 turnCorrFrac = 1;
-topCandidates = round(num/10);
+topCandidates = round(num/5);
 
 damp = 0.0005;
 
@@ -106,7 +106,7 @@ randVariable=rand();
 
 %% MAKE BOT MEASUREMENT
 
-    upperLim=150;
+    upperLim=120;
     botDist = ultraScanNXT(mot_a,90,6);   %take real scan
     
     botVecMag = norm(botDist);   %vector mag for bot distance data
@@ -117,35 +117,6 @@ randVariable=rand();
             botDist(i)=upperLim;
         end    
     end
-    
-    %%Vectors for determining direction of movement (towards area of most space)
-    
-    
-        v1 = [0,botDist(1,1)];
-        v2 = [-(botDist(2,1)*cos(pi/6)),(botDist(2,1)*sin(pi/6))];
-        v3 = [-(botDist(3,1)*cos(pi/6)),-(botDist(3,1)*sin(pi/6))];
-        v4 = [0,-botDist(4,1)];
-        v5 = [(botDist(5,1)*cos(pi/6)),-(botDist(5,1)*sin(pi/6))];
-        v6 = [(botDist(6,1)*cos(pi/6)),(botDist(6,1)*sin(pi/6))];
-
-        netVec = v1+v2+v3+v4+v5+v6;
-        turnVal = atan2(netVec(1,2),netVec(1,1));
-         turnVal=turnVal-(pi/2);
-         moveDist = sqrt(((netVec(1,2))^2)+((netVec(1,1))^2));
-         if moveDist>=40
-             moveDist=40;
-         end
-         
-         if turnVal>pi
-             turnVal = turnVal- (2*pi);
-         end
-         if turnVal<-pi
-             turnVal = turnVal + (2*pi);
-         end
-         
-             
-       
-        moveDist = sqrt(((netVec(1,2))^2)+((netVec(1,1))^2));
 
 
 %% PARTICLE MEASUREMENTS
@@ -378,8 +349,8 @@ end
 
 
 %allocate 15 random particles to ensure diversity
-if j<=num-50
-    for x=1:50
+if j<=num-20
+    for x=1:20
         %pause(0.001);
         particles(j).randomPose(10);
        
@@ -460,13 +431,18 @@ prox_dist = 20;
     else
         if randVariable<randFrac
             
+         if dirIndice1<=4
+        
+            botTurn((dirIndice1-1)*(turn_inc));   %turn left towards longest distance
+        else
+            botTurn((7-dirIndice1)*(-turn_inc));   %turn right towards longest dist.
+        end
+            BOT_TURN = (dirIndice1-1)*(turn_inc);
             
-             botTurn(turnVal);
-            BOT_TURN = (turnVal);
             
             
-            botMove(moveDist);   %move bot a fraction of the previously measured max distance
-            BOT_MOVE = moveDist;
+            botMove(moveDistFrac*maxDist);   %move bot a fraction of the previously measured max distance
+            BOT_MOVE = moveDistFrac*maxDist;
             
         else
             X=rand;
@@ -488,14 +464,7 @@ prox_dist = 20;
         
     end
 
-    
-    
-    
- 
-
-  
-
-  
+   
 
     %%  MOVE ALL PARTICLES
 
@@ -544,15 +513,15 @@ for i=1:num
     particles(i).drawBot(3, 'black');
 end
 
-disp('after particle move');
+disp('converged');
 hold off;
-end
+    end
 
 
 clf;
 
 %% EXTRACT ESTIMATED BOT POSITION
-disp('converged');
+
 
 
 

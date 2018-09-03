@@ -23,9 +23,9 @@ for i = 1:samples-1
     mot_a.TachoLimit =angleIt;
     mot_a.SendToNXT(); %move motor
     mot_a.WaitFor();
-   pause(0.1);
+    pause(0.3);
 end
-radii(6) = GetUltrasonic(SENSOR_1);
+radii(4) = GetUltrasonic(SENSOR_1);
 
 %move the motor back to it's original position
 %you could probably get a second scan at this point if you wanted and merge
@@ -33,7 +33,7 @@ radii(6) = GetUltrasonic(SENSOR_1);
 %turn the other way to stop the cable getting tangled.
 
 mot_a.Power = scanSpeed;
-mot_a.TachoLimit = 300 + 12;
+mot_a.TachoLimit = 270;
 %mot_a.TachoLimit = 300;
 mot_a.SendToNXT(); %move motor
 mot_a.WaitFor();

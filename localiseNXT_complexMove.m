@@ -1,4 +1,4 @@
-function [botEst] = localiseNXT(botSim,map)
+function [botEst] = localiseNXT_complexMove(botSim,map)
 %This function returns botSim, and accepts, botSim, a map and a target.
 %LOCALISE Template localisation function
 
@@ -145,8 +145,6 @@ randVariable=rand();
          
              
        
-        moveDist = sqrt(((netVec(1,2))^2)+((netVec(1,1))^2));
-
 
 %% PARTICLE MEASUREMENTS
 if particle_correction == 1
