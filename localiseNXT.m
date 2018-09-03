@@ -25,7 +25,7 @@ Mnoise = 0.1;  %noise variables
 Tnoise = 0.1;
 Snoise = 0.1;
 
-num=300;   %set number of particles
+num=400;   %set number of particles
 moveDistFrac = 0.4;
 randFrac = 0.7;
 turnCorrFrac = 1;
@@ -350,8 +350,8 @@ end
 
 
 %allocate 15 random particles to ensure diversity
-if j<=num-15
-    for x=1:15
+if j<=num-30
+    for x=1:30
         %pause(0.001);
         particles(j).randomPose(10);
        
@@ -468,21 +468,7 @@ prox_dist = 20;
  
 
   
- %% DRAW AFTER MOVE BOT
-if debug==1
-botSim.drawMap();
 
-
-for k=1:num
-    
-    particles(k).drawBot(3, 'black');
-end
-
-disp('After bot move.');
-hold off;
-end
-
-clf;
   
 
     %%  MOVE ALL PARTICLES
