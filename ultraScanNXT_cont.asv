@@ -1,4 +1,4 @@
-function [radii, angles] = ultraScanNXT_cont(scanSpeed)
+function [radii,max,min,] = ultraScanNXT_cont(scanSpeed, sgolayWindow)
 
 COM_CloseNXT all;  
 h = COM_OpenNXT(); 
@@ -6,29 +6,26 @@ COM_SetDefaultNXT(h); %set default handle
 OpenUltrasonic(SENSOR_1);
 correct_fac = 3;
 mot_a = NXTMotor('A');
+maxVal=40;
 
 
 tot=90;
-radii=zeros(tot);
+radii=zeros(1,tot);
 %motor.stop('Brake'); %cancels any previous movement that may be happening
 mot_a.ActionAtTachoLimit = 'Brake'; % Want precise movment
 mot_a.Power = -scanSpeed; % so it turns counterclockwise
 mot_a.SmoothStart = false; %we want the scan to be as linear as possible
 
 
-
-
-
-
- 
 mot_a.SendToNXT(); %move motor
-mot_a.WaitFor();
+
 
     
 for i = 1:tot
     radii(i) = GetUltrasonic(SENSOR_1);
 end
 mot_a.Stop('off');
+mot_a.WaitFor();
 
 
 %move the motor back to it's original position
@@ -37,13 +34,25 @@ mot_a.Stop('off');
 %turn the other way to stop the cable getting tangled.
 
 mot_a.Power = 90;
-mot_a.TachoLimit = 360;
+mot_a.TachoLimit = 350;
 %mot_a.TachoLimit = 300;
 mot_a.SendToNXT(); %move motor
 mot_a.WaitFor();
 
-for j = 1:num
-    if radii(j)>100
-        radii(j)=100;
-        e
+% 
+% for j = 1:tot
+%     if radii(j)>maxVal
+%         radii(j)=maxVal;
+%     end
+% end
+
+
+clf
+figure();
+hold on
+plot(radii);
+
+radiiSmooth = smoothdata(radii, 'sgolay',sgolayWindow);
+
+plot(radiiSmooth);
 

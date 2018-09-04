@@ -7,12 +7,17 @@ function [botEst] = localiseNXT(botSim,map)
 % particle correction set to 1 if want to use particle orientation
 % correction
 debug=1;
-particle_correction = 0;
+
+
+
+%% Set scan number and filtering window
+scans=95;
+sgolayWindow=15;
 
 %%  SET UP UNIVERSAL CONST. + STARTER VALUES
   %set initial parameters and certain variables
 %SD = 10;
-SD = 11;
+SD = 100;
 SD_POS = 8;  % standard deviation position - for convergence check
 SD_ANG = 10; 
 
@@ -25,13 +30,15 @@ Mnoise = 0.07;  %noise variables
 Tnoise = 0.07;
 Snoise = 0.05;
 
-num=500;   %set number of particles
+num=300;   %set number of particles
 moveDistFrac = 0.4;
 randFrac = 0.5;
 turnCorrFrac = 1;
 topCandidates = round(num/15);
 
 damp = 0.0005;
+
+
 
 
 allWeights = zeros(1,num);  %array for storing weights before normalisation.
@@ -65,7 +72,8 @@ for i =1:num
     particles(i) = BotSim(map);
     particles(i).randomPose(10);  % note - number specifies distance from boundary
   
-    
+  
+    particles(i).setScanConfig(particles(i).generateScanConfig(scans))
     particles(i).setMotionNoise(Mnoise);       %movement noise
     particles(i).setTurningNoise(Tnoise);      %turning noise
     particles(i).setSensorNoise(Snoise);    %sensor noise
@@ -107,85 +115,18 @@ randVariable=rand();
 %% MAKE BOT MEASUREMENT
 
     upperLim=150;
-    botDist = ultraScanNXT(mot_a,90,6);   %take real scan
-    
-    botVecMag = norm(botDist);   %vector mag for bot distance data
+    botDist = ultraScanNXT_cont(scans,20,sgolayWindow);   %take real scan
+
     
     % Place upper limit on readings
-    for i = 1:6        
+    for i = 1:scans        
         if botDist(i)>upperLim
             botDist(i)=upperLim;
         end    
     end
 
 
-%% PARTICLE MEASUREMENTS
-if particle_correction == 1
 
-for i = 1:num
-    
-    partInsideMap = particles(i).insideMap();
-    
-    if  partInsideMap ==1
-      
-        particleDist  = particles(i).ultraScan(); %perform simulated scan
-        
-         % Place upper limit on readings
-        for j = 1:6        
-             if particleDist(j)>upperLim
-                 particleDist(j)=upperLim;
-             end
-        end
-
-        resultsArray(1,i) = i;  %send indice to results array
-       
-        particlePosition = particles(i).getBotPos(1); %for virtual bot position
-        resultsArray(2,i) = particlePosition(1);  % insert x position into results array
-        resultsArray(3,i) = particlePosition(2);   % insert y position into results array
-   
-        vecMag = zeros(1,6);
-        
-        for m=1:6    %loop for cycling through possible orientations with respect to actual bot
-            vec = circshift(particleDist,m-1);
-           vecMag(m) = sqrt(sum((vec-botDist).^2));   %finds best orientation fit
-             
-        end
-        
-        
-        [z, dirInd] = min(vecMag);    %select smallest vectoral difference to use for alignment correction.
-        randForTurn = rand();
-        
-       
-
-        
-        %%
-        
-        if randForTurn<=turnCorrFrac
-            
-            particles(i).turn((dirInd-1)*(-pi/3));    %turn towards best fitting orientation
-        else
-        end
-     
-        resultsArray(4,i) = particles(i).getBotAng();  %insert new angle into results array
-        
-        collectedZvalues(i)= z;
-        
-        LHS = (2*pi*(SD^2))^(-0.5);
-        expon = -(z)^2/(2*(SD^2));
-        
-        weight = LHS*exp(expon) + damp;   %find weight (un-normalised)
-        allWeights(1,i) = weight;    %add to collected weight array
-       
-   
-    else
-        allWeights(1,i) = 0;
-    end
-    
-  
-    
-end
-
-else
 %% PARTICLE MEASUREMENTS (only if particleCorrection=!0)
 for i = 1:num
     
@@ -194,13 +135,14 @@ for i = 1:num
     if  partInsideMap ==1
       
         particleDist  = particles(i).ultraScan(); %perform simulated scan
+        particleDist = smoothdata(particleDist, 'sgolay', sgolayWindow);
         
          % Place upper limit on readings
-        for j = 1:6        
-             if particleDist(j)>upperLim
-                 particleDist(j)=upperLim;
-             end
-        end
+%         for j = 1:scans       
+%              if particleDist(j)>upperLim
+%                  particleDist(j)=upperLim;
+%              end
+%         end
 
         resultsArray(1,i) = i;  %send indice to results array
        
@@ -210,7 +152,7 @@ for i = 1:num
    
       
         
-        z = sqrt(sum((particleDist-botDist).^2));
+        z = sqrt(sum((particleDist-botDist').^2));
          
      
        
@@ -236,7 +178,7 @@ for i = 1:num
   
     
 end
-end
+
 
 %% DRAW AFTER CORRECTION
 if debug==1
@@ -349,8 +291,8 @@ end
 
 
 %allocate 15 random particles to ensure diversity
-if j<=num-50
-    for x=1:50
+if j<=num-15
+    for x=1:15
         %pause(0.001);
         particles(j).randomPose(10);
        
@@ -409,35 +351,37 @@ clf;
 % 
 % end
 
-turn_inc = pi/3;
+turn_inc = (2*pi)/scans;
 prox_dist = 20;
+
+halfway = scans/2;
 
 [maxDist, dirIndice1] = max(botDist);   %returns maximum distance measured, and an indice to denote the direction.
 [minDist, dirIndice2] = min(botDist); %returns min distance, and indice
 
-    if minDist<prox_dist
+    %if minDist<prox_dist
         
-        if dirIndice2<=4
-        
-            botTurn((dirIndice2-1)*(turn_inc));   %turn left towards shortest distance
-        else
-            botTurn((7-dirIndice2)*(-turn_inc));   %turn right towards shortest distance
-        end
-        
-        BOT_TURN = (dirIndice2-1)*(turn_inc);
-       
-        botMove(-10);   %move bot backwards away from wall
-        BOT_MOVE = -10;
-    else
+%         if dirIndice2<=halfway
+%         
+%             botTurn((dirIndice2-1)*(turn_inc));   %turn left towards shortest distance
+%         else
+%             botTurn((scans-dirIndice2)*(-turn_inc));   %turn right towards shortest distance
+%         end
+%         
+%         BOT_TURN = (dirIndice2)*(turn_inc);
+%        
+%         botMove(-10);   %move bot backwards away from wall
+%         BOT_MOVE = -10;
+   % else
         if randVariable<randFrac
             
-         if dirIndice1<=4
+         if dirIndice1<=halfway
         
-            botTurn((dirIndice1-1)*(turn_inc));   %turn left towards longest distance
+            botTurn((dirIndice1)*(turn_inc));   %turn left towards longest distance
         else
-            botTurn((7-dirIndice1)*(-turn_inc));   %turn right towards longest dist.
+            botTurn((scans-dirIndice1)*(-turn_inc));   %turn right towards longest dist.
         end
-            BOT_TURN = (dirIndice1-1)*(turn_inc);
+            BOT_TURN = (dirIndice1)*(turn_inc);
             
             
             
@@ -462,7 +406,7 @@ prox_dist = 20;
             BOT_MOVE = 0.5*safeMin;
         end
         
-    end
+    %end
 
    
 

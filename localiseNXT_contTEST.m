@@ -7,13 +7,18 @@ function [botEst] = localiseNXT(botSim,map)
 % particle correction set to 1 if want to use particle orientation
 % correction
 debug=1;
-particle_correction = 0;
+topConvCheck =0;
+
+
+%% Set scan number and filtering window
+scans=95;
+sgolayWindow=15;
 
 %%  SET UP UNIVERSAL CONST. + STARTER VALUES
   %set initial parameters and certain variables
 %SD = 10;
-SD = 11;
-SD_POS = 8;  % standard deviation position - for convergence check
+SD = 100;
+SD_POS = 10;  % standard deviation position - for convergence check
 SD_ANG = 10; 
 
  
@@ -21,17 +26,20 @@ SD_ANG = 10;
 % Tnoise = 0.05;
 % Snoise = 0.3;
 
-Mnoise = 0.07;  %noise variables
-Tnoise = 0.07;
+Mnoise = 0.1;  %noise variables
+Tnoise = 0.1;
 Snoise = 0.05;
 
-num=500;   %set number of particles
-moveDistFrac = 0.4;
-randFrac = 0.5;
-turnCorrFrac = 1;
+num=300;   %set number of particles
+moveDistFrac = 0.3;
+randFrac = 0.8;
+
 topCandidates = round(num/15);
 
-damp = 0.0005;
+%damp = 0.0005;
+damp=0.0001;
+convFrac = num/10;
+
 
 
 allWeights = zeros(1,num);  %array for storing weights before normalisation.
@@ -65,7 +73,8 @@ for i =1:num
     particles(i) = BotSim(map);
     particles(i).randomPose(10);  % note - number specifies distance from boundary
   
-    
+  
+    particles(i).setScanConfig(particles(i).generateScanConfig(scans))
     particles(i).setMotionNoise(Mnoise);       %movement noise
     particles(i).setTurningNoise(Tnoise);      %turning noise
     particles(i).setSensorNoise(Snoise);    %sensor noise
@@ -74,22 +83,22 @@ end
 
 
 %% DRAW INITIAL DISTRIB.
-if debug==1
-botSim.drawMap();
-
-
-for k=1:num
-    
-    particles(k).drawBot(3, 'black');
-end
-
-
-hold off;
-disp('initial distrib.');
-
-end
-
-clf;
+% if debug==1
+% botSim.drawMap();
+% 
+% 
+% for k=1:num
+%     
+%     particles(k).drawBot(3, 'black');
+% end
+% 
+% 
+% hold off;
+% disp('initial distrib.');
+% 
+% end
+% pause(0.1);
+% clf;
 
 
 
@@ -106,86 +115,19 @@ randVariable=rand();
 
 %% MAKE BOT MEASUREMENT
 
-    upperLim=150;
-    botDist = ultraScanNXT(mot_a,90,6);   %take real scan
-    
-    botVecMag = norm(botDist);   %vector mag for bot distance data
+    upperLim=120;
+    botDist = ultraScanNXT_cont(scans,20,sgolayWindow);   %take real scan
+
     
     % Place upper limit on readings
-    for i = 1:6        
+    for i = 1:scans        
         if botDist(i)>upperLim
             botDist(i)=upperLim;
         end    
     end
 
 
-%% PARTICLE MEASUREMENTS
-if particle_correction == 1
 
-for i = 1:num
-    
-    partInsideMap = particles(i).insideMap();
-    
-    if  partInsideMap ==1
-      
-        particleDist  = particles(i).ultraScan(); %perform simulated scan
-        
-         % Place upper limit on readings
-        for j = 1:6        
-             if particleDist(j)>upperLim
-                 particleDist(j)=upperLim;
-             end
-        end
-
-        resultsArray(1,i) = i;  %send indice to results array
-       
-        particlePosition = particles(i).getBotPos(1); %for virtual bot position
-        resultsArray(2,i) = particlePosition(1);  % insert x position into results array
-        resultsArray(3,i) = particlePosition(2);   % insert y position into results array
-   
-        vecMag = zeros(1,6);
-        
-        for m=1:6    %loop for cycling through possible orientations with respect to actual bot
-            vec = circshift(particleDist,m-1);
-           vecMag(m) = sqrt(sum((vec-botDist).^2));   %finds best orientation fit
-             
-        end
-        
-        
-        [z, dirInd] = min(vecMag);    %select smallest vectoral difference to use for alignment correction.
-        randForTurn = rand();
-        
-       
-
-        
-        %%
-        
-        if randForTurn<=turnCorrFrac
-            
-            particles(i).turn((dirInd-1)*(-pi/3));    %turn towards best fitting orientation
-        else
-        end
-     
-        resultsArray(4,i) = particles(i).getBotAng();  %insert new angle into results array
-        
-        collectedZvalues(i)= z;
-        
-        LHS = (2*pi*(SD^2))^(-0.5);
-        expon = -(z)^2/(2*(SD^2));
-        
-        weight = LHS*exp(expon) + damp;   %find weight (un-normalised)
-        allWeights(1,i) = weight;    %add to collected weight array
-       
-   
-    else
-        allWeights(1,i) = 0;
-    end
-    
-  
-    
-end
-
-else
 %% PARTICLE MEASUREMENTS (only if particleCorrection=!0)
 for i = 1:num
     
@@ -194,13 +136,14 @@ for i = 1:num
     if  partInsideMap ==1
       
         particleDist  = particles(i).ultraScan(); %perform simulated scan
+        particleDist = smoothdata(particleDist, 'sgolay', sgolayWindow);
         
          % Place upper limit on readings
-        for j = 1:6        
-             if particleDist(j)>upperLim
-                 particleDist(j)=upperLim;
-             end
-        end
+%         for j = 1:scans       
+%              if particleDist(j)>upperLim
+%                  particleDist(j)=upperLim;
+%              end
+%         end
 
         resultsArray(1,i) = i;  %send indice to results array
        
@@ -210,7 +153,7 @@ for i = 1:num
    
       
         
-        z = sqrt(sum((particleDist-botDist).^2));
+        z = sqrt(sum((particleDist-botDist').^2));
          
      
        
@@ -236,23 +179,23 @@ for i = 1:num
   
     
 end
-end
-
-%% DRAW AFTER CORRECTION
-if debug==1
-botSim.drawMap();
 
 
-for k=1:num
-    
-    particles(k).drawBot(3, 'black');
-end
-
-disp('After Correction for optimal angle.');
-hold off;
-end
-
-clf;
+% %% DRAW AFTER CORRECTION
+% if debug==1
+% botSim.drawMap();
+% 
+% 
+% for k=1:num
+%     
+%     particles(k).drawBot(3, 'black');
+% end
+% 
+% disp('After Correction for optimal angle.');
+% hold off;
+% end
+% pause(0.1)
+% clf;
 
 
 %%
@@ -275,11 +218,15 @@ resultsFullSorted = sortrows(resultsFull',-5);
 %% CHECK FOR CONVERGENCE
 
 
-
-standardDev_X = std(resultsFullSorted( 1:(topCandidates), 2));
-standardDev_y = std(resultsFullSorted( 1:(topCandidates), 3));
-standardDev_ang = std(resultsFullSorted( 1:(topCandidates), 4));
-
+if topConvCheck ==1;
+    standardDev_X = std(resultsFullSorted( 1:(topCandidates), 2));
+    standardDev_y = std(resultsFullSorted( 1:(topCandidates), 3));
+    standardDev_ang = std(resultsFullSorted( 1:(topCandidates), 4));
+else
+    standardDev_X = std(resultsFullSorted( 1:(convFrac), 2));
+    standardDev_y = std(resultsFullSorted( 1:(convFrac), 3));
+    standardDev_ang = std(resultsFullSorted( 1:(convFrac), 4));
+end
 
 if standardDev_X<SD_POS && standardDev_y<SD_POS &&  standardDev_ang<SD_ANG
     convergeCheck = 1;
@@ -299,8 +246,10 @@ end
 
 disp('After conv check.');
 hold off;
+standardDev_X
+standardDev_y
 end
-
+pause(0.3)
  clf;
 
 
@@ -349,8 +298,8 @@ end
 
 
 %allocate 15 random particles to ensure diversity
-if j<=num-50
-    for x=1:50
+if j<=num-15
+    for x=1:15
         %pause(0.001);
         particles(j).randomPose(10);
        
@@ -399,7 +348,7 @@ end
 disp('after reallocation');
 hold off;
 end
-
+pause(0.3)
 clf;
 
 %% MOVE BOT
@@ -409,40 +358,43 @@ clf;
 % 
 % end
 
-turn_inc = pi/3;
-prox_dist = 20;
+turn_inc = (2*pi)/scans;
+prox_dist = 10;
+
+halfway = scans/2;
 
 [maxDist, dirIndice1] = max(botDist);   %returns maximum distance measured, and an indice to denote the direction.
 [minDist, dirIndice2] = min(botDist); %returns min distance, and indice
 
     if minDist<prox_dist
         
-        if dirIndice2<=4
+        if dirIndice2<=halfway
         
             botTurn((dirIndice2-1)*(turn_inc));   %turn left towards shortest distance
         else
-            botTurn((7-dirIndice2)*(-turn_inc));   %turn right towards shortest distance
+            botTurn((scans-dirIndice2)*(-turn_inc));   %turn right towards shortest distance
         end
         
-        BOT_TURN = (dirIndice2-1)*(turn_inc);
+        BOT_TURN = (dirIndice2)*(turn_inc);
        
         botMove(-10);   %move bot backwards away from wall
         BOT_MOVE = -10;
-    else
+   else
         if randVariable<randFrac
+            r =rand();
             
-         if dirIndice1<=4
-        
-            botTurn((dirIndice1-1)*(turn_inc));   %turn left towards longest distance
-        else
-            botTurn((7-dirIndice1)*(-turn_inc));   %turn right towards longest dist.
-        end
-            BOT_TURN = (dirIndice1-1)*(turn_inc);
+            if dirIndice1<=halfway
+                
+                botTurn((dirIndice1)*(turn_inc));   %turn left towards longest distance
+            else
+                botTurn((scans-dirIndice1)*(-turn_inc));   %turn right towards longest dist.
+            end
+            BOT_TURN = (dirIndice1)*(turn_inc);
             
             
             
-            botMove(moveDistFrac*maxDist);   %move bot a fraction of the previously measured max distance
-            BOT_MOVE = moveDistFrac*maxDist;
+            botMove((moveDistFrac*maxDist)*r + 5);   %move bot a fraction of the previously measured max distance
+            BOT_MOVE = (moveDistFrac*maxDist)*r +5;
             
         else
             X=rand;
@@ -485,20 +437,20 @@ else
 end
 iterations=iterations+1;
 
-
-%% DRAW AFTER MOVE PARTICLES
-if debug==1
-botSim.drawMap();
-for k=1:num
-    
-    particles(k).drawBot(3, 'black');
-end
-
-disp('after particle move');
-hold off;
-end
-
-clf;
+% 
+% %% DRAW AFTER MOVE PARTICLES
+% if debug==1
+% botSim.drawMap();
+% for k=1:num
+%     
+%     particles(k).drawBot(3, 'black');
+% end
+% 
+% disp('after particle move');
+% hold off;
+% end
+% pause(0.1)
+% clf;
 
 end
 
@@ -524,21 +476,35 @@ clf;
 
 
 
-
-topX=zeros(1,topCandidates);
-topY=zeros(1,topCandidates);
-topAng=zeros(1,topCandidates);
-
-
-
-for i=1:(topCandidates)
-    k = resultsFullSorted(i,1);
-    position = particles(k).getBotPos();
-    angle = particles(k).getBotAng();
-    topX(i) = position(1,1);
-    topY(i) = position(1,2);
-    topAng(i) = angle;
+if topConvCheck==1
+    topX=zeros(1,topCandidates);
+    topY=zeros(1,topCandidates);
+    topAng=zeros(1,topCandidates);
+   
+    for i=1:(topCandidates)
+        k = resultsFullSorted(i,1);
+        position = particles(k).getBotPos();
+        angle = particles(k).getBotAng();
+        topX(i) = position(1,1);
+        topY(i) = position(1,2);
+        topAng(i) = angle;
+    end
+    
+else
+    topX=zeros(1,convFrac);
+    topY=zeros(1,convFrac);
+    topAng=zeros(1,convFrac);
+    
+    for i=1:(convFrac)
+        k = resultsFullSorted(i,1);
+        position = particles(k).getBotPos();
+        angle = particles(k).getBotAng();
+        topX(i) = position(1,1);
+        topY(i) = position(1,2);
+        topAng(i) = angle;
+    end
 end
+
 
 
 

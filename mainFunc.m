@@ -7,7 +7,6 @@ axis equal;
 map=[0,0;
     66,0;
     66,44;
-   
     44,44;
     44,67;
     110,67;
@@ -27,7 +26,7 @@ botSim.drawMap();
 drawnow;
 
 
-returnedPos = localiseNXT_test(botSim,map); %Where the magic happens
+returnedPos = localiseNXT_cont(botSim,map); %Where the magic happens
  NXT_PlayTone(300,700, h); % play tone to specify that 
 
 COM_CloseNXT all;
