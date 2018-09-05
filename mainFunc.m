@@ -1,27 +1,40 @@
-clf;        %clears figures
-clc;        %clears console
-clear;      %clears workspace
-axis equal; %keeps the x and y scale the same
-map=[0,0;60,0;60,45;45,45;45,59;106,59;106,105;0,105];  %default map
+% Sebastian Oakes
+% University of Bristol
+% August 2018
+% Base program for particle filter (for NXT mindstorms)
+%
+%
+
+clf;        
+clc;        
+clear;     
 
 
-% initialise the robot
-COM_CloseNXT all;  %prepares workspace
-h = COM_OpenNXT(); %prepares workspace,  if this fails, there is an issue with your robot (e.g. connectoin, driver, motorControl22 not running)
-COM_SetDefaultNXT(h); %sets default handle
+axis equal; 
+map=[0,0;
+    66,0;
+    66,44;
+    44,44;
+    44,67;
+    110,67;
+    110,111;
+    0,111];  %map based on lab arena measurements
 
 
-% botSim = BotSim(map,[0.01,0.005,0]);  %sets up a botSim object a map, and debug mode on.
-botSim = BotSim(map,[0,0,0]);  %sets up a botSim object a map, and debug mode on.
+% initialise NXT
+COM_CloseNXT all;  
+h = COM_OpenNXT(); 
+COM_SetDefaultNXT(h); %set default handle
+
+
+botSim = BotSim(map,[0,0,0]);  %set up a botSim object and map
 botSim.drawMap();
 drawnow;
-botSim.randomPose(10); %puts the robot in a random position at least 10cm away from a wall
-target = botSim.getRndPtInMap(10);  %gets random target.
 
 
-returnedBot = localiseNXT(botSim,map,target); %Where the magic happens
- NXT_PlayTone(300,700, h); % play tone to 
+returnedPos = localiseNXT_cont(botSim,map); %Where the magic happens
+ NXT_PlayTone(300,700, h); % play tone to specify convergence or 1 min elapsed
 
-COM_CloseNXT all;
+COM_CloseNXT all;   %close ports
 
 

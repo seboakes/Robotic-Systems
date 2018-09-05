@@ -20,7 +20,7 @@ if moveVal ~= 0
 
     moveVal=abs(moveVal);
     
-    wheel_circ = 4.4*pi;
+    wheel_circ = 4.2*pi;
     rot_num = moveVal/wheel_circ;
     rot_degrees = round(rot_num*360);
     
